@@ -56,16 +56,38 @@ public class Entry
         var sequence = new ReadOnlySequence<byte>(encodedData);
         var reader = new SequenceReader<byte>(sequence);
 
-        reader.TryReadLittleEndian(out int keyLength);
-        reader.TryReadLittleEndian(out int valueLength);
+        if (!reader.TryReadLittleEndian(out uint keyLengthU) ||
+            !reader.TryReadLittleEndian(out uint valueLengthU))
+        {
+            throw new FormatException("Entry header is incomplete.");
+        }
 
-        var key  = new byte[keyLength];
-        reader.TryCopyTo(key);
+        if (keyLengthU > int.MaxValue || valueLengthU > int.MaxValue)
+        {
+            throw new FormatException("Entry lengths are too large.");
+        }
+
+        int keyLength = (int)keyLengthU;
+        int valueLength = (int)valueLengthU;
+
+        if (reader.Remaining < (long)keyLength + valueLength)
+        {
+            throw new FormatException("Entry payload is incomplete.");
+        }
+
+        var key = new byte[keyLength];
+        if (!reader.TryCopyTo(key))
+        {
+            throw new FormatException("Entry key is incomplete.");
+        }
         reader.Advance(keyLength);
         Key = key;
 
-        byte[] value = new byte[valueLength];
-        reader.TryCopyTo(value);
+        var value = new byte[valueLength];
+        if (!reader.TryCopyTo(value))
+        {
+            throw new FormatException("Entry value is incomplete.");
+        }
         reader.Advance(valueLength);
         Value = value;
     }
