@@ -36,19 +36,16 @@ public class Entry
         var sequence = new ReadOnlySequence<byte>(encodedData);
         var reader = new SequenceReader<byte>(sequence);
 
-        if (!reader.TryReadLittleEndian(out uint keyLengthU) ||
-            !reader.TryReadLittleEndian(out uint valueLengthU))
+        if (!reader.TryReadLittleEndian(out int keyLength) ||
+            !reader.TryReadLittleEndian(out int valueLength))
         {
             throw new FormatException("Entry header is incomplete.");
         }
 
-        if (keyLengthU > int.MaxValue || valueLengthU > int.MaxValue)
+        if (keyLength < 0 || valueLength < 0)
         {
-            throw new FormatException("Entry lengths are too large.");
+            throw new FormatException("Entry lengths are invalid.");
         }
-
-        int keyLength = (int)keyLengthU;
-        int valueLength = (int)valueLengthU;
 
         if (reader.Remaining < (long)keyLength + valueLength)
         {
