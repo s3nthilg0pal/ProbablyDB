@@ -10,45 +10,25 @@ public class Entry
     public byte[] Encode()
     {
         var length = 4 + 4 + Key.Length + Value.Length;
-        var rented = ArrayPool<byte>.Shared.Rent(length);
-
-        try
-        {
+        byte[] result = new byte[length];
 
         int offset = 0;
 
-        //key
-        Span<byte> keyBuffer = stackalloc byte[4];
-        uint unsignedKeyLength = (uint)Key.Length;
+        BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(offset, 4), Key.Length);
 
-        BinaryPrimitives.WriteUInt32LittleEndian(keyBuffer, unsignedKeyLength);
+        offset += 4;
 
-        keyBuffer.CopyTo(rented.AsSpan(offset));
-        offset += keyBuffer.Length;
+        BinaryPrimitives.WriteInt32LittleEndian(result.AsSpan(offset, 4), Value.Length);
 
-        //value
-        Span<byte> valueBuffer = stackalloc byte[4];
-        uint unsignedValueLength = (uint)Value.Length;
+        offset += 4;
 
-        BinaryPrimitives.WriteUInt32LittleEndian(valueBuffer, unsignedValueLength);
-
-        valueBuffer.CopyTo(rented.AsSpan(offset));
-        offset += valueBuffer.Length;
-
-        //key
-        Key.CopyTo(rented.AsSpan(offset));
+        Key.CopyTo(result.AsSpan(offset));
         offset += Key.Length;
 
-        //value
-        Value.CopyTo(rented.AsSpan(offset));
-        offset += Value.Length;
+        Value.CopyTo(result.AsSpan(offset));
 
-        return rented.AsSpan(0, offset).ToArray();
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(rented);
-        }
+
+        return result;
     }
 
     public void Decode(byte[] encodedData)
